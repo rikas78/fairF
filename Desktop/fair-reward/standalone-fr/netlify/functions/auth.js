@@ -1,74 +1,110 @@
-/* eslint-disable no-undef */
-/* global require, module, process, console */
-const { createClient } = require("@supabase/supabase-js");
+import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-const HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, Idempotency-Key",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json",
-};
-
-const json = (code, body) => ({
-  statusCode: code,
-  headers: HEADERS,
-  body: JSON.stringify(body),
-});
-
-const BONUS_WELCOME = 2.0;
-
-exports.handler = async (event) => {
-  if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: HEADERS, body: "" };
-  if (event.httpMethod !== "POST") return json(405, { status: "error", message: "Metodo non consentito." });
-  if (!SUPABASE_URL || !SUPABASE_KEY) return json(500, { status: "error", message: "Configurazione server mancante. Contatta l'assistenza." });
-
-  let email = "";
-  try {
-    email = (JSON.parse(event.body || "{}").email || "").trim().toLowerCase();
-  } catch {
-    return json(400, { status: "error", message: "Richiesta non valida." });
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return json(400, { status: "error", message: "Inserisci un indirizzo email valido." });
+export async function handler(event) {
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, body: 'Metodo non consentito' };
   }
 
-  const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
-
   try {
-    const { data: existing, error: selErr } = await sb
-      .from("users")
-      .select("id, email, nickname, balance")
-      .eq("email", email)
-      .maybeSingle();
-
-    if (selErr) return json(500, { status: "error", message: "Errore di lettura account. Riprova." });
-
-    let user = existing;
-    if (!user) {
-      const nickname = email.split("@")[0];
-      const { data, error } = await sb
-        .from("users")
-        .insert({ email, nickname, balance: BONUS_WELCOME })
-        .select("id, email, nickname, balance")
-        .single();
-      if (error) return json(500, { status: "error", message: "Impossibile creare l'account. Riprova tra poco." });
-      user = data;
+    const { email } = JSON.parse(event.body);
+    if (!email) {
+      return { 
+        statusCode: 400, 
+        body: JSON.stringify({ status: 'error', message: 'Email obbligatoria' }) 
+      };
     }
 
-    return json(200, {
-      status: "success",
-      user: {
-        id: user.id,
-        email: user.email,
-        nickname: user.nickname,
-        balance: Number(user.balance),
+    let { data: user, error: findError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (findError) throw findError;
+
+    if (!user) {
+      const { data: newUser, error: createError } = await supabase
+        .from('users')
+        .insert([{ email, balance: 2.00, pending_balance: 0.00 }])
+        .select('*')
+        .single();
+
+      if (createError) throw createError;
+      user = newUser;
+    }
+
+    return {
+      statusCode: 200,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
       },
-    });
-  } catch (err) {
-    console.error("auth error", err);
-    return json(500, { status: "error", message: "Errore imprevisto del server. Riprova." });
+      body: JSON.stringify({ status: 'success', user })
+    };
+
+  } catch (error) {
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ status: 'error', message: error.message })
+    };
   }
-};
+}
+netlify/functions/tasks.js
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+
+export async function handler(event) {
+  if (event.httpMethod !== 'GET') {
+    return { statusCode: 405, body: 'Metodo non consentito' };
+  }
+
+  try {
+    const { data: tasks, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('is_verified', true);
+
+    if (error) throw error;
+
+    const formattedTasks = tasks.map(task => {
+      const rawReward = Number(task.total_reward || 0);
+      const expensePercentage = Number(task.expense_percentage || 25);
+      const expenses = rawReward * (expensePercentage / 100);
+      const netEarnings = rawReward - expenses;
+      const userShare = Number((netEarnings * 0.5).toFixed(2));
+
+      return {
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        partner_url: task.partner_url || '',
+        quota_total: task.required_quota || 0,
+        net_reward: userShare,
+        expense_percentage: expensePercentage,
+        entry_cost: task.entry_cost || 0,
+        video_url: task.video_url || '',
+        credit_time: task.credit_time || '24-48 ore'
+      };
+    });
+
+    return {
+      statusCode: 200,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({ status: 'success', tasks: formattedTasks })
+    };
+
+  } catch (error) {
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ status: 'error', message: error.message })
+    };
+  }
+}
