@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FairReward 50/50</title>
+<style>
+:root{--primary:#0EA5A4;--accent:#22C55E;--bg:#071021;--card:#0B1220;--muted:#9AA6B2}
+html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#0f1720);color:#e6eef6;font-family:Inter,system-ui,Arial}
+.app{max-width:420px;margin:0 auto;padding:18px}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo svg{width:44px;height:44px;border-radius:10px}
+.balance{background:var(--card);padding:14px;border-radius:12px;margin-bottom:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+.balance .amount{font-size:20px;font-weight:700;color:var(--accent)}
+.section-title{font-size:13px;color:var(--muted);margin:12px 0 8px}
+.task-card{background:rgba(255,255,255,0.03);padding:12px;border-radius:12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.task-left{max-width:65%}
+.task-title{font-weight:600;margin-bottom:6px}
+.task-meta{font-size:12px;color:var(--muted)}
+.btn{background:var(--accent);color:#042018;padding:8px 12px;border-radius:10px;border:0;font-weight:700}
+.btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,0.6)}
+.modal.show{display:flex}
+.modal-card{background:#071021;padding:16px;border-radius:14px;width:92%;max-width:420px}
+.muted{color:var(--muted);font-size:13px}
+.footer{position:fixed;left:0;right:0;bottom:0;padding:10px;background:linear-gradient(180deg,transparent,rgba(0,0,0,0.6));display:flex;justify-content:center}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="logo">
+      <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 120 120" aria-hidden="true">
+        <rect rx="20" width="120" height="120" fill="#0EA5A4"/>
+        <g transform="translate(18,18)" fill="#071021">
+          <path d="M12 6h6v36h-6zM30 18h6v24h-6zM48 0h6v42h-6z" />
+        </g>
+      </svg>
+      <div>
+        <div style="font-weight:700">FairReward</div>
+        <div class="muted" style="font-size:12px">Trasparenza 50/50 • Milano</div>
+      </div>
+    </div>
+    <div class="muted" style="font-size:12px">Saldo reale</div>
+  </div>
+
+  <div class="balance" id="balanceCard">
+    <div class="muted">IL TUO SALDO</div>
+    <div class="amount" id="balanceAmount">€0,00</div>
+    <div class="muted" style="margin-top:8px">Solo saldo FairReward per partecipare. Nessun versamento esterno.</div>
+  </div>
+
+  <div class="section-title">Catalogo lavori</div>
+
+  <!-- TASK ID HARDCODATO PER TEST -->
+  <div class="task-card" data-task-id="a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d" data-required-quota="10.00" data-cofinancing="true">
+    <div class="task-left">
+      <div class="task-title">Download & Registrazione Base</div>
+      <div class="task-meta">Tempo 3 min • Ricompensa totale €24 • Quota richiesta €10</div>
+    </div>
+    <div>
+      <button class="btn" onclick="startTask(this)">Inizia ora</button>
+      <div style="height:6px"></div>
+      <button class="btn ghost" onclick="showDetails(this)">Dettagli</button>
+    </div>
+  </div>
+
+  <div id="activeList" class="section-title muted">Nessun lavoro attivo</div>
+</div>
+
+<div id="modal" class="modal" role="dialog" aria-hidden="true">
+  <div class="modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>Conferma partecipazione</strong>
+      <button onclick="closeModal()" class="btn ghost">Chiudi</button>
+    </div>
+    <p class="muted" id="modalText">Riepilogo...</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn ghost" onclick="closeModal()">Annulla</button>
+      <button class="btn" id="confirmBtn" onclick="confirmParticipate()">Partecipa</button>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <div style="max-width:420px;width:100%;display:flex;gap:8px;justify-content:space-around">
+    <button class="btn ghost">Home</button>
+    <button class="btn ghost">Il mio lavoro</button>
+    <button class="btn ghost">Cassa</button>
+    <button class="btn ghost">Profilo</button>
+  </div>
+</div>
+
+<script>
+// PUNTIAMO ALLA FUNZIONE LOCALE DI NETLIFY/BASE44
+const API_BASE = "/.netlify/functions/participate";
+const AUTH_TOKEN = "TEST_TOKEN_IGNORE";
+
+// UTENTE HARDCODATO (Il tuo ID su Supabase)
+let user = { id: "550e8400-e29b-41d4-a716-446655440000", balance: 12.50 };
+
+function fmt(e){ return '€' + Number(e).toFixed(2); }
+document.getElementById('balanceAmount').textContent = fmt(user.balance);
+
+function startTask(btn){
+  const card = btn.closest('.task-card');
+  const required = parseFloat(card.dataset.requiredQuota || card.getAttribute('data-required-quota'));
+  const cofin = card.dataset.cofinancing === 'true' || card.getAttribute('data-cofinancing') === 'true';
+  const userQuota = user.balance >= required ? required : (cofin ? (required/2) : null);
+  
+  if(userQuota === null){ alert('Saldo insufficiente. Completa task da 2 minuti per accumulare saldo.'); return; }
+  
+  const frPart = (userQuota === required) ? 0 : (required - userQuota);
+  document.getElementById('modalText').textContent = `Quota richiesta €${required.toFixed(2)}. Verranno prelevati dal tuo saldo €${userQuota.toFixed(2)}. FairReward coprirà €${frPart.toFixed(2)}.`;
+  document.getElementById('modal').classList.add('show');
+  
+  window._currentTask = { id: card.dataset.taskId, userQuota, frPart };
+}
+
+function closeModal(){ document.getElementById('modal').classList.remove('show'); }
+
+async function confirmParticipate(){
+  const t = window._currentTask;
+  if(!t) return;
+  const idempotency = crypto.randomUUID();
+  document.getElementById('confirmBtn').disabled = true;
+  
+  try{
+    const res = await fetch(API_BASE, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+AUTH_TOKEN, 'Idempotency-Key': idempotency },
+      body: JSON.stringify({ user_id: user.id, request_cofinancing: true, task_id: t.id })
+    });
+    const json = await res.json();
+    
+    if(json.status === 'success'){
+      user.balance = Math.max(0, user.balance - Number(json.data.user_balance_deducted || 0));
+      document.getElementById('balanceAmount').textContent = fmt(user.balance);
+      alert('Partecipazione avviata con successo! Guarda il database.');
+      closeModal();
+    } else {
+      alert(json.message || json.error_code || 'Errore');
+    }
+  } catch(e){ alert('Errore di connessione al server'); }
+  
+  document.getElementById('confirmBtn').disabled = false;
+}
+</script>
+</body>
+</html>

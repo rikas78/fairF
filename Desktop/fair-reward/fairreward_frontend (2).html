@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="it" class="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>FairReward 50/50 — Terrazza Milano Edition</title>
+
+<!-- TAILWIND & FONTS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif']
+        },
+        colors: {
+          terrazza: {
+            bg: '#060B16',
+            card: '#0D1527',
+            border: '#1E2B45',
+            teal: '#0EA5A4',
+            neon: '#14F195',
+            gold: '#F59E0B',
+            goldDark: '#B45309'
+          }
+        }
+      }
+    }
+  }
+</script>
+
+<style>
+  body { 
+    background-color: #060B16; 
+    color: #F1F5F9; 
+    font-family: 'Plus Jakarta Sans', sans-serif; 
+    -webkit-tap-highlight-color: transparent; 
+  }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  
+  .glass-header { 
+    background: rgba(6, 11, 22, 0.88); 
+    backdrop-filter: blur(20px); 
+    -webkit-backdrop-filter: blur(20px); 
+  }
+  
+  .glass-card-premium { 
+    background: linear-gradient(145deg, rgba(13, 21, 39, 0.85), rgba(9, 15, 29, 0.95)); 
+    backdrop-filter: blur(12px); 
+    border: 1px solid rgba(20, 241, 149, 0.12); 
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  }
+
+  .gold-border-glow {
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.08);
+  }
+
+  .skyline-gradient {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, rgba(6, 11, 22, 0.95) 85%),
+                radial-gradient(circle at 80% 20%, rgba(14, 165, 164, 0.18), transparent 50%),
+                radial-gradient(circle at 20% 80%, rgba(245, 158, 11, 0.12), transparent 50%);
+  }
+
+  .btn-press { transition: transform 0.1s ease, opacity 0.15s ease, box-shadow 0.2s ease; }
+  .btn-press:active { transform: scale(0.96); }
+
+  @keyframes pulseSubtle { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
+  .pulse-subtle { animation: pulseSubtle 3s infinite ease-in-out; }
+</style>
+</head>
+
+<body class="flex justify-center min-h-screen bg-[#040810]">
+
+<div class="w-full max-w-md bg-[#060B16] min-h-screen relative flex flex-col shadow-2xl border-x border-slate-800/60 pb-24 skyline-gradient">
+
+  <!-- HEADER ESCLUSIVO MILANO PORTA NUOVA -->
+  <header class="sticky top-0 z-40 glass-header border-b border-slate-800/80 px-4 py-3.5 flex items-center justify-between">
+    <div class="flex items-center gap-2.5">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 via-teal-500 to-terrazza-neon p-0.5 shadow-lg shadow-teal-500/20">
+        <div class="w-full h-full bg-[#060B16] rounded-[10px] flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 120 120" fill="#0EA5A4">
+            <rect rx="20" width="120" height="120" fill="#0EA5A4"/>
+            <g transform="translate(18,18)" fill="#060B16">
+              <path d="M12 6h6v36h-6zM30 18h6v24h-6zM48 0h6v42h-6z" />
+            </g>
+          </svg>
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center gap-1.5">
+          <h1 class="font-extrabold text-base tracking-tight text-white leading-none">FairReward</h1>
+          <span class="text-[9px] font-black bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-full uppercase tracking-wider">50/50</span>
+        </div>
+        <p class="text-[10px] text-slate-400 font-medium mt-0.5 flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-terrazza-neon inline-block animate-pulse"></span>
+          Terrazza Porta Nuova • Milano
+        </p>
+      </div>
+    </div>
+
+    <!-- SALDO & DEMO WALLET -->
+    <div class="flex items-center gap-2">
+      <button onclick="addDemoFunds()" title="Aggiungi Saldo Demo per testare" class="btn-press bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[10px] font-black px-2 py-1.5 rounded-xl flex items-center gap-1">
+        <span>+ €10</span>
+      </button>
+
+      <div onclick="switchTab('wallet')" class="cursor-pointer bg-[#0D1527] border border-terrazza-neon/30 hover:border-terrazza-neon/60 transition-colors px-3 py-1.5 rounded-xl text-right shadow-inner btn-press">
+        <span class="text-[8px] text-slate-400 font-bold tracking-widest uppercase block">Saldo Disponibile</span>
+        <span class="text-sm font-black text-terrazza-neon tabular-nums leading-none" id="headerBalance">€12,50</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENUTO PRINCIPALE -->
+  <main class="flex-1 overflow-y-auto px-4 pt-4 space-y-6">
+
+    <!-- VIEW 1: HOME CATALOGO TERRAZZA -->
+    <section id="viewHome" class="space-y-6">
+
+      <!-- BANNER HERO: MILANO SKYLINE & GARANZIA OTTONE/ORO -->
+      <div class="relative rounded-3xl bg-gradient-to-br from-slate-900 via-[#0C1425] to-[#081226] border border-amber-500/30 p-5 overflow-hidden shadow-2xl gold-border-glow">
+        
+        <!-- Sfondo Silhouette Skyline Milano SVG -->
+        <div class="absolute -bottom-2 -right-2 opacity-15 pointer-events-none text-slate-400">
+          <svg width="220" height="90" viewBox="0 0 220 90" fill="currentColor">
+            <path d="M10 90V50h15v40h10V30h20v60h15V15h25v75h10V40h15v50h15V20h20v70h15V55h20v35h15V90H10z"/>
+          </svg>
+        </div>
+
+        <div class="relative z-10 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+              👑 GARANZIA ISTITUZIONALE MILANO
+            </span>
+            <span class="text-[10px] text-slate-400 font-medium">Camera di Commercio NA-MI</span>
+          </div>
+
+          <div>
+            <h2 class="text-xl font-black text-white leading-snug tracking-tight">Guadagna in totale serenità dal cuore di Milano.</h2>
+            <p class="text-xs text-slate-300 mt-1 leading-relaxed">
+              Decidi tu quanto tempo dedicare stasera. Nessun deposito dai tuoi conti personali: se un lavoro richiede una quota, la co-finanziamo dal nostro fondo fino al 50%.
+            </p>
+          </div>
+
+          <div class="pt-2 flex items-center justify-between border-t border-slate-800/80">
+            <div class="text-[11px] text-slate-400">
+              Fondo Garanzia Terrazza: <strong class="text-terrazza-neon font-extrabold" id="frLiquidityText">€3.500,00</strong>
+            </div>
+            <button onclick="scrollToCatalog()" class="text-xs font-bold text-amber-400 flex items-center gap-1 hover:underline">
+              Sfoglia Commesse &rarr;
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CAROSELLO LAVORI ATTIVI (PROGRESIO LIVE) -->
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            Commessa In Corso (<span id="activeCount">1</span>)
+          </h3>
+          <button onclick="switchTab('tasks')" class="text-xs text-terrazza-teal font-semibold hover:underline">Vedi tutte</button>
+        </div>
+
+        <div class="flex gap-3 overflow-x-auto scrollbar-hide pb-2 snap-x" id="activeCarousel">
+          <!-- Active Task Card 1 -->
+          <div class="snap-start min-w-[280px] glass-card-premium rounded-2xl p-4 flex flex-col justify-between space-y-3">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-base">
+                  🎮
+                </div>
+                <div>
+                  <h4 class="font-bold text-xs text-white leading-tight">Monopoly GO!</h4>
+                  <p class="text-[10px] text-slate-400">Traguardo: Livello 10</p>
+                </div>
+              </div>
+              <span class="text-[10px] font-extrabold text-terrazza-neon bg-terrazza-neon/10 px-2 py-0.5 rounded-full border border-terrazza-neon/20">€8,50 Netto</span>
+            </div>
+
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-[10px] text-slate-400 font-medium">
+                <span>Progresso: Livello <strong class="text-white" id="monoLvlText">8</strong>/10</span>
+                <span class="text-amber-400 font-bold" id="monoPctText">80%</span>
+              </div>
+              <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+                <div id="monoBar" class="bg-gradient-to-r from-amber-500 to-terrazza-neon h-full rounded-full transition-all duration-500" style="width: 80%"></div>
+              </div>
+            </div>
+
+            <button onclick="advanceMonoTask()" id="monoAdvBtn" class="w-full btn-press bg-slate-800/80 hover:bg-slate-700/80 text-amber-400 text-[11px] font-bold py-1.5 rounded-xl border border-amber-500/30 flex items-center justify-center gap-1">
+              ⚡ Simula Avanzamento Livello
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SELEZIONE PER TEMPO (FILTRI PULITI) -->
+      <div id="catalogSection" class="space-y-2">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Quanto tempo desideri dedicare stasera?</h3>
+        <div class="flex gap-2 overflow-x-auto scrollbar-hide py-1">
+          <button onclick="filterCategory('all', this)" class="cat-pill active px-3.5 py-2 rounded-xl text-xs font-bold border transition-all whitespace-nowrap bg-terrazza-teal text-slate-950 border-teal-400 shadow-md shadow-teal-500/20">
+            Tutte le Commesse
+          </button>
+          <button onclick="filterCategory('fast', this)" class="cat-pill px-3.5 py-2 rounded-xl text-xs font-bold border transition-all whitespace-nowrap bg-[#0D1527] text-slate-300 border-slate-800 hover:border-slate-700">
+            ⏱️ 2-5 Minuti (Flash)
+          </button>
+          <button onclick="filterCategory('games', this)" class="cat-pill px-3.5 py-2 rounded-xl text-xs font-bold border transition-all whitespace-nowrap bg-[#0D1527] text-slate-300 border-slate-800 hover:border-slate-700">
+            🎮 Trova il tuo Gioco
+          </button>
+          <button onclick="filterCategory('premium', this)" class="cat-pill px-3.5 py-2 rounded-xl text-xs font-bold border transition-all whitespace-nowrap bg-[#0D1527] text-slate-300 border-slate-800 hover:border-slate-700">
+            🏦 Conti Smart & Fintech
+          </button>
+          <button onclick="filterCategory('surveys', this)" class="cat-pill px-3.5 py-2 rounded-xl text-xs font-bold border transition-all whitespace-nowrap bg-[#0D1527] text-slate-300 border-slate-800 hover:border-slate-700">
+            📋 Sondaggi d'Opinione
+          </button>
+        </div>
+      </div>
+
+      <!-- CATALOGO COMMESSE -->
+      <div class="space-y-3.5" id="taskList">
+
+        <!-- Task 1: Download Veloce -->
+        <div class="task-card glass-card-premium rounded-2xl p-4 border border-slate-800 hover:border-terrazza-teal/40 transition-all flex flex-col justify-between" data-category="fast">
+          <div class="flex justify-between items-start gap-3">
+            <div class="flex gap-3">
+              <div class="w-12 h-12 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400 font-extrabold text-xl shrink-0">
+                📲
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="font-bold text-sm text-white">Download & Accesso App Partner</h4>
+                  <span class="text-[9px] font-bold bg-teal-500/10 text-terrazza-teal border border-teal-500/20 px-2 py-0.5 rounded-md">2 MINUTI</span>
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5">Scarica l'applicazione partner, registrati ed effettua il primo accesso.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+            <div>
+              <span class="text-[10px] text-slate-400 font-semibold block">Il tuo 50% Netto</span>
+              <span class="text-lg font-black text-terrazza-neon">€ 24,00</span>
+              <span class="text-[10px] text-slate-400 block">Quota richiesta: €10,00</span>
+            </div>
+            <button onclick="prepareTask('t1', 'Download & Accesso App Partner', 10.00, 24.00, true)" class="btn-press bg-terrazza-neon hover:bg-emerald-400 text-slate-950 font-extrabold px-4 py-2.5 rounded-xl text-xs shadow-lg shadow-emerald-500/20">
+              Inizia Ora
+            </button>
+          </div>
+        </div>
+
+        <!-- Task 2: Gioco (The Gamer) -->
+        <div class="task-card glass-card-premium rounded-2xl p-4 border border-amber-500/20 hover:border-amber-500/40 transition-all flex flex-col justify-between" data-category="games">
+          <div class="flex justify-between items-start gap-3">
+            <div class="flex gap-3">
+              <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 font-extrabold text-xl shrink-0">
+                🧩
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="font-bold text-sm text-white">Wooden Puzzle Bliss</h4>
+                  <span class="text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-md">MONETIZZA IL GIOCO</span>
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5">Completa il capitolo 5 entro 7 giorni. Nessun acquisto in-app richiesto.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+            <div>
+              <span class="text-[10px] text-slate-400 font-semibold block">Il tuo 50% Netto</span>
+              <span class="text-lg font-black text-amber-400">€ 14,00</span>
+              <span class="text-[10px] text-slate-400 block">Quota richiesta: €0,00 (Gratuito)</span>
+            </div>
+            <button onclick="prepareTask('t2', 'Wooden Puzzle Bliss', 0.00, 14.00, false)" class="btn-press bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-4 py-2.5 rounded-xl text-xs shadow-lg shadow-amber-500/20">
+              Gioca & Incassa
+            </button>
+          </div>
+        </div>
+
+        <!-- Task 3: Premium Banking -->
+        <div class="task-card glass-card-premium rounded-2xl p-4 border border-indigo-500/30 hover:border-indigo-500/50 transition-all flex flex-col justify-between bg-gradient-to-b from-indigo-950/20 to-[#0D1527]" data-category="premium">
+          <div class="flex justify-between items-start gap-3">
+            <div class="flex gap-3">
+              <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-extrabold text-xl shrink-0">
+                🏦
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="font-bold text-sm text-white">Revolut / Conto Smart</h4>
+                  <span class="text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-md">PREMIUM MILANO</span>
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5">Apertura conto a canone zero. Accredito B2B in 24h lavorative.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+            <div>
+              <span class="text-[10px] text-slate-400 font-semibold block">Il tuo 50% Netto</span>
+              <span class="text-lg font-black text-indigo-300">€ 40,00</span>
+              <span class="text-[10px] text-slate-400 block">Quota richiesta: €20,00</span>
+            </div>
+            <button onclick="prepareTask('t3', 'Revolut / Conto Smart', 20.00, 40.00, true)" class="btn-press bg-indigo-500 hover:bg-indigo-400 text-white font-extrabold px-4 py-2.5 rounded-xl text-xs shadow-lg shadow-indigo-500/20">
+              Partecipa Ora
+            </button>
+          </div>
+        </div>
+
+        <!-- Task 4: Sondaggio -->
+        <div class="task-card glass-card-premium rounded-2xl p-4 border border-slate-800 hover:border-slate-700 transition-all flex flex-col justify-between" data-category="surveys">
+          <div class="flex justify-between items-start gap-3">
+            <div class="flex gap-3">
+              <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 font-extrabold text-xl shrink-0">
+                📋
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="font-bold text-sm text-white">Sondaggio Consumi Tech</h4>
+                  <span class="text-[9px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-md">5 MINUTI</span>
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5">Rispondi a 10 domande sugli acquisti tecnologici recenti.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+            <div>
+              <span class="text-[10px] text-slate-400 font-semibold block">Il tuo 50% Netto</span>
+              <span class="text-lg font-black text-purple-300">€ 3,50</span>
+              <span class="text-[10px] text-slate-400 block">Quota richiesta: €0,00 (Gratuito)</span>
+            </div>
+            <button onclick="prepareTask('t4', 'Sondaggio Consumi Tech', 0.00, 3.50, false)" class="btn-press bg-purple-500 hover:bg-purple-400 text-slate-950 font-extrabold px-4 py-2.5 rounded-xl text-xs shadow-lg shadow-purple-500/20">
+              Rispondi Ora
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- VIEW 2: I MIEI LAVORI -->
+    <section id="viewTasks" class="hidden space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-lg font-black text-white">Commesse In Corso & Storico</h2>
+        <span class="text-xs font-bold text-terrazza-teal bg-teal-500/10 px-2.5 py-1 rounded-full border border-teal-500/20">Monitoraggio Live</span>
+      </div>
+
+      <div id="userTasksList" class="space-y-3">
+        <!-- Generato via JavaScript -->
+      </div>
+    </section>
+
+    <!-- VIEW 3: CASSA & PRELIEVI -->
+    <section id="viewWallet" class="hidden space-y-6">
+      <div class="glass-card-premium rounded-3xl p-5 border border-terrazza-neon/30 bg-gradient-to-br from-[#0B1A2D] via-[#081222] to-[#050B18] shadow-2xl gold-border-glow">
+        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">Saldo FairReward Prelevabile</span>
+        <div class="text-4xl font-black text-terrazza-neon mt-1 tabular-nums" id="walletBalanceBig">€12,50</div>
+        <p class="text-xs text-slate-400 mt-2">Zero commissioni di prelievo. Accredito diretto su PayPal o Bonifico Bancario SEPA.</p>
+      </div>
+
+      <div class="space-y-4">
+        <h3 class="text-xs font-bold text-white uppercase tracking-wider">Richiedi Prelievo Immediato</h3>
+        <div class="glass-card-premium rounded-2xl p-4 space-y-3.5 border border-slate-800">
+          <div>
+            <label class="text-xs text-slate-400 font-semibold block mb-1">Metodo di Accredito</label>
+            <select id="payoutMethod" class="w-full bg-[#060B16] border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-terrazza-teal">
+              <option value="paypal">PayPal (Accredito in 24 ore)</option>
+              <option value="sepa">Bonifico Bancario SEPA (IBAN)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs text-slate-400 font-semibold block mb-1">Email PayPal / Codice IBAN</label>
+            <input type="text" id="payoutDestination" placeholder="es. riccardo@example.com / IT60X..." class="w-full bg-[#060B16] border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-terrazza-teal" />
+          </div>
+
+          <div>
+            <label class="text-xs text-slate-400 font-semibold block mb-1">Importo da Prelevare (€)</label>
+            <input type="number" id="payoutAmount" value="12.50" step="0.50" class="w-full bg-[#060B16] border border-slate-700 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-terrazza-teal" />
+          </div>
+
+          <button onclick="requestPayout()" class="w-full btn-press bg-terrazza-neon hover:bg-emerald-400 text-slate-950 font-black py-3.5 rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20">
+            Conferma & Trasferisci
+          </button>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Registro Transazioni</h3>
+        <div id="txHistory" class="space-y-2 text-xs">
+          <div class="glass-card-premium rounded-xl p-3 flex justify-between items-center border border-slate-800">
+            <div>
+              <div class="font-bold text-white">Bonus Onboarding Milano</div>
+              <div class="text-[10px] text-slate-400">Oggi • Accredito Diretto</div>
+            </div>
+            <span class="font-black text-terrazza-neon">+€12.50</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 4: PROFILO & CERTIFICAZIONE MILANO -->
+    <section id="viewProfile" class="hidden space-y-5">
+      <div class="glass-card-premium rounded-2xl p-4 border border-slate-800 flex items-center gap-4">
+        <div class="w-14 h-14 rounded-2xl bg-[#081226] border border-amber-500/30 flex items-center justify-center text-2xl font-black text-amber-400 shadow-inner">
+          RP
+        </div>
+        <div>
+          <h3 class="font-bold text-base text-white">Riccardo (PM)</h3>
+          <p class="text-xs text-slate-400">ID: 550e8400-e29b-41d4</p>
+          <span class="inline-block mt-1 text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-md">
+            Lavoratore Silver • 14 Commesse
+          </span>
+        </div>
+      </div>
+
+      <div class="glass-card-premium rounded-2xl p-4 border border-slate-800 space-y-2">
+        <div class="flex justify-between items-center text-xs">
+          <span class="font-bold text-slate-300">Livello Successivo: <strong class="text-amber-400">Gold Worker</strong></span>
+          <span class="text-slate-400 text-[11px]">14/25 Commesse</span>
+        </div>
+        <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+          <div class="bg-gradient-to-r from-amber-500 to-terrazza-teal h-full rounded-full" style="width: 56%"></div>
+        </div>
+        <p class="text-[10px] text-slate-400">Raggiungi il livello Gold per accedere a co-finanziamenti fino a €100/mese.</p>
+      </div>
+
+      <!-- POLICY TRASPARENZA & CERTIFICATO BOHER -->
+      <div class="glass-card-premium rounded-2xl p-4 border border-amber-500/30 space-y-3 bg-gradient-to-br from-[#0B1426] to-[#080E1C] gold-border-glow">
+        <h4 class="font-bold text-xs uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+          📜 Garanzia Istituzionale & Trasparenza
+        </h4>
+        <ul class="text-xs text-slate-300 space-y-2">
+          <li class="flex items-start gap-2">
+            <span class="text-terrazza-neon font-bold">✓</span>
+            <span><strong>Nessun versamento esterno:</strong> Non chiediamo mai versamenti da tue carte di credito o conti personali.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-terrazza-neon font-bold">✓</span>
+            <span><strong>Profit-Sharing 50/50:</strong> Dividiamo equamente al 50% i compensi riconosciuti dai network partner.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-terrazza-neon font-bold">✓</span>
+            <span><strong>Sede a Milano:</strong> Sede operativa ed amministrativa situata nel distretto finanziario di Milano.</span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODALE INTERATTIVA CO-FINANZIAMENTO 50/50 -->
+  <div id="taskModal" class="fixed inset-0 z-50 bg-[#040810]/80 backdrop-blur-md hidden items-center justify-center p-4">
+    <div class="bg-[#0B1325] border border-amber-500/30 rounded-3xl w-full max-w-sm p-5 space-y-4 shadow-2xl gold-border-glow">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-sm text-white" id="modalTaskTitle">Conferma Partecipazione</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="bg-[#060B16] p-3.5 rounded-2xl border border-slate-800 space-y-2">
+          <div class="flex justify-between text-slate-400">
+            <span>Quota Totale Commessa:</span>
+            <strong class="text-white" id="modalReqQuota">€10.00</strong>
+          </div>
+          <div class="flex justify-between text-terrazza-neon">
+            <span>Scalato dal tuo Saldo FR:</span>
+            <strong id="modalUserQuota">€5.00</strong>
+          </div>
+          <div class="flex justify-between text-amber-400">
+            <span>Co-Finanziato da FairReward:</span>
+            <strong id="modalFrQuota">€5.00</strong>
+          </div>
+          <div class="border-t border-slate-800 pt-2 flex justify-between text-sm font-bold text-white">
+            <span>Il tuo 50% Netto a Fine Lavoro:</span>
+            <span class="text-terrazza-neon" id="modalNetReward">€12.00</span>
+          </div>
+        </div>
+
+        <label class="flex items-start gap-2 text-[11px] text-slate-300 cursor-pointer pt-1">
+          <input type="checkbox" id="modalAgree" class="mt-0.5 rounded border-slate-700 text-terrazza-teal focus:ring-0 bg-slate-950" checked />
+          <span>Accetto che la mia quota venga riservata dal mio saldo FairReward fino al completamento del lavoro.</span>
+        </label>
+      </div>
+
+      <div class="flex gap-2 pt-1">
+        <button onclick="closeModal()" class="w-1/2 btn-press bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-xs">
+          Annulla
+        </button>
+        <button id="confirmParticipateBtn" onclick="confirmTaskParticipation()" class="w-1/2 btn-press bg-terrazza-neon hover:bg-emerald-400 text-slate-950 font-black py-2.5 rounded-xl text-xs shadow-lg shadow-emerald-500/20">
+          Conferma & Partecipa
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICHE TOAST -->
+  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-terrazza-neon text-slate-950 font-extrabold px-4 py-2.5 rounded-2xl shadow-2xl text-xs transition-all duration-300 opacity-0 pointer-events-none transform -translate-y-4 flex items-center gap-2">
+    <span id="toastIcon">✓</span>
+    <span id="toastMsg">Operazione completata!</span>
+  </div>
+
+  <!-- BOTTOM NAVIGATION BAR ESCLUSIVA -->
+  <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md glass-header border-t border-slate-800/80 py-2.5 px-6 flex justify-between items-center z-40">
+    <button onclick="switchTab('home')" id="navHome" class="nav-btn active flex flex-col items-center gap-1 text-terrazza-teal">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 00-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      <span class="text-[10px] font-bold">Home</span>
+    </button>
+
+    <button onclick="switchTab('tasks')" id="navTasks" class="nav-btn flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+      <span class="text-[10px] font-bold">Commesse</span>
+    </button>
+
+    <button onclick="switchTab('wallet')" id="navWallet" class="nav-btn flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300 relative">
+      <span class="w-2 h-2 rounded-full bg-terrazza-neon absolute top-0 right-2 border border-slate-950"></span>
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+      <span class="text-[10px] font-bold">Cassa</span>
+    </button>
+
+    <button onclick="switchTab('profile')" id="navProfile" class="nav-btn flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+      <span class="text-[10px] font-bold">Profilo</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- LOGICA INTERATTIVA CLIENT-SIDE -->
+<script>
+  let user = {
+    id: "550e8400-e29b-41d4-a716-446655440000",
+    balance: 12.50
+  };
+
+  let monoProgress = 80;
+  let activeTasks = [
+    { id: 't-mono', title: 'Monopoly GO!', progress: 80, reward: 8.50, status: 'in_progress' }
+  ];
+
+  let selectedTask = null;
+
+  function fmt(val) {
+    return '€' + Number(val).toFixed(2).replace('.', ',');
+  }
+
+  function updateBalanceDisplay() {
+    document.getElementById('headerBalance').textContent = fmt(user.balance);
+    document.getElementById('walletBalanceBig').textContent = fmt(user.balance);
+    document.getElementById('payoutAmount').value = user.balance.toFixed(2);
+  }
+
+  function addDemoFunds() {
+    user.balance += 10.00;
+    updateBalanceDisplay();
+    addTxLog('Accredito Demo Test', 10.00);
+    showToast('Aggiunti €10,00 di saldo demo!', 'success');
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('main > section').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.classList.remove('text-terrazza-teal', 'active');
+      btn.classList.add('text-slate-500');
+    });
+
+    if (tab === 'home') {
+      document.getElementById('viewHome').classList.remove('hidden');
+      document.getElementById('navHome').classList.add('text-terrazza-teal', 'active');
+      document.getElementById('navHome').classList.remove('text-slate-500');
+    } else if (tab === 'tasks') {
+      document.getElementById('viewTasks').classList.remove('hidden');
+      document.getElementById('navTasks').classList.add('text-terrazza-teal', 'active');
+      document.getElementById('navTasks').classList.remove('text-slate-500');
+      renderUserTasks();
+    } else if (tab === 'wallet') {
+      document.getElementById('viewWallet').classList.remove('hidden');
+      document.getElementById('navWallet').classList.add('text-terrazza-teal', 'active');
+      document.getElementById('navWallet').classList.remove('text-slate-500');
+    } else if (tab === 'profile') {
+      document.getElementById('viewProfile').classList.remove('hidden');
+      document.getElementById('navProfile').classList.add('text-terrazza-teal', 'active');
+      document.getElementById('navProfile').classList.remove('text-slate-500');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function filterCategory(cat, pillBtn) {
+    document.querySelectorAll('.cat-pill').forEach(btn => {
+      btn.classList.remove('bg-terrazza-teal', 'text-slate-950', 'border-teal-400', 'shadow-md', 'shadow-teal-500/20');
+      btn.classList.add('bg-[#0D1527]', 'text-slate-300', 'border-slate-800');
+    });
+    pillBtn.classList.remove('bg-[#0D1527]', 'text-slate-300', 'border-slate-800');
+    pillBtn.classList.add('bg-terrazza-teal', 'text-slate-950', 'border-teal-400', 'shadow-md', 'shadow-teal-500/20');
+
+    document.querySelectorAll('#taskList > div').forEach(card => {
+      if (cat === 'all' || card.dataset.category === cat) {
+        card.classList.remove('hidden');
+      } else {
+        card.classList.add('hidden');
+      }
+    });
+  }
+
+  function scrollToCatalog() {
+    document.getElementById('catalogSection').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function prepareTask(id, title, reqQuota, totalReward, cofinancingAllowed) {
+    let userQuota = 0;
+    let frQuota = 0;
+
+    if (reqQuota > 0) {
+      if (user.balance >= reqQuota) {
+        userQuota = reqQuota;
+        frQuota = 0;
+      } else if (cofinancingAllowed && user.balance >= (reqQuota / 2)) {
+        userQuota = reqQuota / 2;
+        frQuota = reqQuota / 2;
+      } else {
+        showToast('Saldo insufficiente. Clicca "+ €10" in alto per il saldo demo!', 'error');
+        return;
+      }
+    }
+
+    selectedTask = { id, title, reqQuota, totalReward, userQuota, frQuota };
+
+    document.getElementById('modalTaskTitle').textContent = title;
+    document.getElementById('modalReqQuota').textContent = fmt(reqQuota);
+    document.getElementById('modalUserQuota').textContent = fmt(userQuota);
+    document.getElementById('modalFrQuota').textContent = fmt(frQuota);
+    document.getElementById('modalNetReward').textContent = fmt(totalReward / 2);
+
+    document.getElementById('taskModal').classList.remove('hidden');
+    document.getElementById('taskModal').classList.add('flex');
+  }
+
+  function closeModal() {
+    document.getElementById('taskModal').classList.add('hidden');
+    document.getElementById('taskModal').classList.remove('flex');
+  }
+
+  function confirmTaskParticipation() {
+    if (!selectedTask) return;
+
+    if (selectedTask.userQuota > user.balance) {
+      showToast('Saldo insufficiente per la tua quota', 'error');
+      closeModal();
+      return;
+    }
+
+    if (selectedTask.userQuota > 0) {
+      user.balance -= selectedTask.userQuota;
+      addTxLog('Quota Riservata: ' + selectedTask.title, -selectedTask.userQuota);
+    }
+    updateBalanceDisplay();
+
+    activeTasks.push({
+      id: selectedTask.id + '-' + Date.now(),
+      title: selectedTask.title,
+      progress: 20,
+      reward: selectedTask.totalReward / 2,
+      status: 'in_progress'
+    });
+
+    document.getElementById('activeCount').textContent = activeTasks.length;
+    closeModal();
+    showToast('Partecipazione avviata con successo!', 'success');
+  }
+
+  function advanceMonoTask() {
+    if (monoProgress < 100) {
+      monoProgress += 10;
+      document.getElementById('monoPctText').textContent = monoProgress + '%';
+      document.getElementById('monoBar').style.width = monoProgress + '%';
+      document.getElementById('monoLvlText').textContent = Math.floor(monoProgress / 10);
+
+      if (monoProgress >= 100) {
+        user.balance += 8.50;
+        updateBalanceDisplay();
+        addTxLog('Completato: Monopoly GO!', 8.50);
+        showToast('🎉 Monopoly GO! Completato! Accredito di €8,50 erogato!', 'success');
+        document.getElementById('monoAdvBtn').textContent = '✓ Commessa Completata';
+        document.getElementById('monoAdvBtn').disabled = true;
+      } else {
+        showToast(`Progresso aggiornato: Livello ${Math.floor(monoProgress / 10)}/10!`, 'success');
+      }
+    }
+  }
+
+  function renderUserTasks() {
+    const container = document.getElementById('userTasksList');
+    if (activeTasks.length === 0) {
+      container.innerHTML = '<p class="text-xs text-slate-400 text-center py-8">Nessuna commessa attiva in corso.</p>';
+      return;
+    }
+
+    container.innerHTML = activeTasks.map(t => `
+      <div class="glass-card-premium rounded-2xl p-4 border border-slate-800 space-y-2">
+        <div class="flex justify-between items-center">
+          <h4 class="font-bold text-sm text-white">${t.title}</h4>
+          <span class="text-xs font-black text-terrazza-neon">${fmt(t.reward)} Netto</span>
+        </div>
+        <div class="flex justify-between text-[10px] text-slate-400">
+          <span>Stato: In Corso</span>
+          <span class="text-terrazza-teal font-bold">${t.progress}%</span>
+        </div>
+        <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800">
+          <div class="bg-terrazza-teal h-full rounded-full" style="width: ${t.progress}%"></div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function requestPayout() {
+    const amount = parseFloat(document.getElementById('payoutAmount').value);
+    const dest = document.getElementById('payoutDestination').value.trim();
+
+    if (!dest) {
+      showToast('Inserisci un IBAN o email PayPal valida', 'error');
+      return;
+    }
+
+    if (isNaN(amount) || amount <= 0 || amount > user.balance) {
+      showToast('Importo non valido o superiore al tuo saldo', 'error');
+      return;
+    }
+
+    user.balance -= amount;
+    updateBalanceDisplay();
+    addTxLog('Richiesta Prelievo (' + document.getElementById('payoutMethod').value.toUpperCase() + ')', -amount);
+    showToast(`Prelievo di ${fmt(amount)} inviato con successo!`, 'success');
+  }
+
+  function addTxLog(desc, amount) {
+    const txContainer = document.getElementById('txHistory');
+    const isPos = amount >= 0;
+    const html = `
+      <div class="glass-card-premium rounded-xl p-3 flex justify-between items-center border border-slate-800">
+        <div>
+          <div class="font-bold text-white">${desc}</div>
+          <div class="text-[10px] text-slate-400">Adesso • Registrato</div>
+        </div>
+        <span class="font-black ${isPos ? 'text-terrazza-neon' : 'text-slate-400'}">${isPos ? '+' : ''}${fmt(amount)}</span>
+      </div>
+    `;
+    txContainer.insertAdjacentHTML('afterbegin', html);
+  }
+
+  function showToast(msg, type = 'success') {
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toastMsg');
+    const toastIcon = document.getElementById('toastIcon');
+
+    toastMsg.textContent = msg;
+    if (type === 'error') {
+      toast.classList.remove('bg-terrazza-neon', 'text-slate-950');
+      toast.classList.add('bg-rose-500', 'text-white');
+      toastIcon.textContent = '✕';
+    } else {
+      toast.classList.remove('bg-rose-500', 'text-white');
+      toast.classList.add('bg-terrazza-neon', 'text-slate-950');
+      toastIcon.textContent = '✓';
+    }
+
+    toast.classList.remove('opacity-0', '-translate-y-4', 'pointer-events-none');
+    toast.classList.add('opacity-100', 'translate-y-0');
+
+    setTimeout(() => {
+      toast.classList.remove('opacity-100', 'translate-y-0');
+      toast.classList.add('opacity-0', '-translate-y-4', 'pointer-events-none');
+    }, 3200);
+  }
+
+  window.addEventListener('load', () => {
+    updateBalanceDisplay();
+  });
+</script>
+
+</body>
+</html>
