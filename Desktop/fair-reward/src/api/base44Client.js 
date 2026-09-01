@@ -1,0 +1,405 @@
+const BASE_URL = 'https://fairreward.netlify.app/.netlify/functions';
+
+export const base44Client = {
+  async login(email) {
+    const response = await fetch(`${BASE_URL}/auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    if (!response.ok) {
+      throw new Error(`Auth fallita con stato: ${response.status}`);
+    }
+    const data = await response.json();
+    if (data.status === 'success') {
+      localStorage.setItem('fr_user', JSON.stringify(data.user));
+    }
+    return data;
+  },
+
+  async getTasks() {
+    const response = await fetch(`${BASE_URL}/tasks`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!response.ok) {
+      throw new Error(`Impossibile caricare i task. Stato: ${response.status}`);
+    }
+    return await response.json();
+  },
+
+  async participate(userId, taskId, idempotencyKey) {
+    const response = await fetch(`${BASE_URL}/participate`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey || crypto.randomUUID()
+      },
+      body: JSON.stringify({ user_id: userId, task_id: taskId })
+    });
+    if (!response.ok) {
+      throw new Error(`Impossibile registrare la partecipazione. Stato: ${response.status}`);
+    }
+    return await response.json();
+  }
+};
+
+export default base44Client;
+netlify/functions/auth.js
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+export async function handler(event) {
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, body: 'Metodo non consentito' };
+  }
+
+  try {
+    const { email } = JSON.parse(event.body);
+    if (!email) {
+      return { 
+        statusCode: 400, 
+        body: JSON.stringify({ status: 'error', message: 'Email obbligatoria' }) 
+      };
+    }
+
+    let { data: user, error: findError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (findError) throw findError;
+
+    if (!user) {
+      const { data: newUser, error: createError } = await supabase
+        .from('users')
+        .insert([{ email, balance: 2.00, pending_balance: 0.00 }])
+        .select('*')
+        .single();
+
+      if (createError) throw createError;
+      user = newUser;
+    }
+
+    return {
+      statusCode: 200,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({ status: 'success', user })
+    };
+
+  } catch (error) {
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ status: 'error', message: error.message })
+    };
+  }
+}
+netlify/functions/tasks.js
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+
+export async function handler(event) {
+  if (event.httpMethod !== 'GET') {
+    return { statusCode: 405, body: 'Metodo non consentito' };
+  }
+
+  try {
+    const { data: tasks, error } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('is_verified', true);
+
+    if (error) throw error;
+
+    const formattedTasks = tasks.map(task => {
+      const rawReward = Number(task.total_reward || 0);
+      const expensePercentage = Number(task.expense_percentage || 25);
+      const expenses = rawReward * (expensePercentage / 100);
+      const netEarnings = rawReward - expenses;
+      const userShare = Number((netEarnings * 0.5).toFixed(2));
+
+      return {
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        partner_url: task.partner_url || '',
+        quota_total: task.required_quota || 0,
+        net_reward: userShare,
+        expense_percentage: expensePercentage,
+        entry_cost: task.entry_cost || 0,
+        video_url: task.video_url || '',
+        credit_time: task.credit_time || '24-48 ore'
+      };
+    });
+
+    return {
+      statusCode: 200,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({ status: 'success', tasks: formattedTasks })
+    };
+
+  } catch (error) {
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ status: 'error', message: error.message })
+    };
+  }
+}
+netlify/functions/participate.js
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+export async function handler(event) {
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, body: 'Metodo non consentito' };
+  }
+
+  try {
+    const { user_id, task_id } = JSON.parse(event.body);
+    const idempotencyKey = event.headers['idempotency-key'] || event.headers['Idempotency-Key'];
+
+    if (!user_id || !task_id) {
+      return { 
+        statusCode: 400, 
+        body: JSON.stringify({ status: 'error', message: 'Parametri user_id o task_id mancanti' }) 
+      };
+    }
+
+    const { data: task, error: taskError } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('id', task_id)
+      .single();
+
+    if (taskError || !task) throw new Error('Task non trovato nel database.');
+
+    const rawReward = Number(task.total_reward || 0);
+    const expensePercentage = Number(task.expense_percentage || 25);
+    const expenses = rawReward * (expensePercentage / 100);
+    const netEarnings = rawReward - expenses;
+    const userShare = Number((netEarnings * 0.5).toFixed(2));
+
+    if (idempotencyKey) {
+      const { data: existingTx } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('idempotency_key', idempotencyKey)
+        .maybeSingle();
+
+      if (existingTx) {
+        return {
+          statusCode: 200,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({
+            status: 'success',
+            transaction_id: existingTx.id,
+            redirect_url: `${task.partner_url}&subid=${existingTx.id}`
+          })
+        };
+      }
+    }
+
+    const entryCost = Number(task.entry_cost || 0);
+    if (entryCost > 0) {
+      const advanceAmount = entryCost * 0.50;
+
+      const { data: user } = await supabase
+        .from('users')
+        .select('balance')
+        .eq('id', user_id)
+        .single();
+
+      if (user) {
+        const newBalance = Number(user.balance) + advanceAmount;
+        
+        await supabase
+          .from('users')
+          .update({ balance: newBalance })
+          .eq('id', user_id);
+
+        await supabase
+          .from('system_logs')
+          .insert([{
+            event_type: 'cofinance_advance',
+            user_id: user_id,
+            details: { task_id, entry_cost: entryCost, advance_credited: advanceAmount }
+          }]);
+      }
+    }
+
+    const { data: transaction, error: txError } = await supabase
+      .from('transactions')
+      .insert([{
+        user_id,
+        task_id,
+        net_reward: userShare,
+        status: 'pending',
+        idempotency_key: idempotencyKey || null
+      }])
+      .select('*')
+      .single();
+
+    if (txError) throw txError;
+
+    const { data: userToUpdate } = await supabase
+      .from('users')
+      .select('pending_balance')
+      .eq('id', user_id)
+      .single();
+
+    if (userToUpdate) {
+      const newPendingBalance = Number(userToUpdate.pending_balance || 0) + userShare;
+      await supabase
+        .from('users')
+        .update({ pending_balance: newPendingBalance })
+        .eq('id', user_id);
+    }
+
+    const partnerBaseUrl = task.partner_url;
+    const finalRedirectUrl = `${partnerBaseUrl}${partnerBaseUrl.includes('?') ? '&' : '?'}subid=${transaction.id}`;
+
+    return {
+      statusCode: 200,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({
+        status: 'success',
+        transaction_id: transaction.id,
+        redirect_url: finalRedirectUrl,
+        subid: transaction.id
+      })
+    };
+
+  } catch (error) {
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ status: 'error', message: error.message })
+    };
+  }
+}
+netlify/functions/postback.js
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+export async function handler(event) {
+  if (event.httpMethod !== 'GET') {
+    return { statusCode: 405, body: 'Metodo non consentito. Usa GET.' };
+  }
+
+  const params = event.queryStringParameters || {};
+  const { subid, secret } = params;
+  const FIXED_SECRET = 'FR5050_SECURE';
+
+  if (secret !== FIXED_SECRET) {
+    return { statusCode: 401, body: 'Non autorizzato: secret non valido.' };
+  }
+
+  if (!subid) {
+    return { statusCode: 200, body: 'Errore: subid mancante.' };
+  }
+
+  try {
+    const { data: transaction, error: txError } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('id', subid)
+      .single();
+
+    if (txError || !transaction) {
+      return { statusCode: 200, body: 'Errore: Transazione non registrata.' };
+    }
+
+    if (transaction.status !== 'pending') {
+      return { statusCode: 200, body: 'Transazione gia completata.' };
+    }
+
+    const userId = transaction.user_id;
+    const rewardAmount = Number(transaction.net_reward || 0);
+
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('balance, pending_balance')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      return { statusCode: 200, body: 'Errore: Utente associato non trovato.' };
+    }
+
+    const newPending = Math.max(0, Number(user.pending_balance || 0) - rewardAmount);
+    const newBalance = Number(user.balance || 0) + rewardAmount;
+
+    await supabase
+      .from('transactions')
+      .update({ status: 'completed' })
+      .eq('id', subid);
+
+    await supabase
+      .from('users')
+      .update({ 
+        balance: newBalance,
+        pending_balance: newPending
+      })
+      .eq('id', userId);
+
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'text/plain' },
+      body: 'OK'
+    };
+
+  } catch (error) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ status: 'error', message: error.message })
+    };
+  }
+}
+src/components/TaskIframeOverlay.jsx
+import React from 'react';
+
+export default function TaskIframeOverlay({ url, title, onClose }) {
+  if (!url) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999] bg-slate-950 flex flex-col">
+      <div className="h-16 bg-slate-900 border-b border-slate-800 text-white flex justify-between items-center px-6 shadow-lg">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+          <div className="min-w-0">
+            <span className="font-bold text-sm text-white block truncate">{title}</span>
+            <span className="text-[10px] text-slate-400 block uppercase tracking-widest">Connessione Protetta</span>
+          </div>
+        </div>
+        <button 
+          onClick={onClose}
+          className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-xl text-xs font-extrabold tracking-wider uppercase transition-all whitespace-nowrap"
+        >
+          Chiudi e Torna
+        </button>
+      </div>
+      <iframe 
+        src={url} 
+        className="w-full flex-1 border-none bg-slate-950"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        title={title}
+      />
+    </div>
+  );
+}

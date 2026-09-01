@@ -1,92 +1,135 @@
-/* eslint-disable no-undef */
-/* global require, module, process, console */
-const { createClient } = require("@supabase/supabase-js");
+import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-const HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, Idempotency-Key",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json",
-};
+export async function handler(event) {
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, body: 'Metodo non consentito' };
+  }
 
-const json = (code, body) => ({ statusCode: code, headers: HEADERS, body: JSON.stringify(body) });
-
-exports.handler = async (event) => {
-  if (event.httpMethod === "OPTIONS") return { statusCode: 204, headers: HEADERS, body: "" };
-  if (event.httpMethod !== "POST") return json(405, { status: "error", message: "Metodo non consentito." });
-  if (!SUPABASE_URL || !SUPABASE_KEY) return json(500, { status: "error", message: "Configurazione server mancante." });
-
-  let payload = {};
   try {
-    payload = JSON.parse(event.body || "{}");
-  } catch {
-    return json(400, { status: "error", message: "Richiesta non valida." });
-  }
-  const userId = payload.user_id;
-  const taskId = payload.task_id;
-  const idempotencyKey = event.headers["idempotency-key"] || payload.idempotency_key;
-  if (!userId || !taskId || !idempotencyKey)
-    return json(400, { status: "error", message: "Parametri mancanti (user_id, task_id, Idempotency-Key)." });
+    const { user_id, task_id } = JSON.parse(event.body);
+    const idempotencyKey = event.headers['idempotency-key'] || event.headers['Idempotency-Key'];
 
-  const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  // Idempotency: se la chiave esiste già, restituisce la transazione già avviata
-  const { data: existing } = await sb
-    .from("transactions")
-    .select("id, task_id")
-    .eq("idempotency_key", idempotencyKey)
-    .maybeSingle();
-  if (existing) {
-    const { data: t } = await sb.from("tasks").select("partner_url").eq("id", existing.task_id).maybeSingle();
-    return json(200, { status: "success", transaction_id: existing.id, redirect_url: (t || {}).partner_url, already_started: true });
-  }
-
-  const { data: user } = await sb.from("users").select("balance").eq("id", userId).maybeSingle();
-  if (!user) return json(404, { status: "error", message: "Utente non trovato." });
-  const { data: task } = await sb.from("tasks").select("*").eq("id", taskId).maybeSingle();
-  if (!task) return json(404, { status: "error", message: "Task non disponibile." });
-
-  const stake = Number(task.quota_total) / 2;
-  if (Number(user.balance) < stake)
-    return json(402, { status: "error", message: "Saldo insufficiente per attivare questo lavoro." });
-
-  const subid = `${userId.slice(0, 8)}-${idempotencyKey}`;
-
-  const { data: tx, error: txErr } = await sb
-    .from("transactions")
-    .insert({
-      user_id: userId,
-      task_id: taskId,
-      idempotency_key: idempotencyKey,
-      subid,
-      stake,
-      net_reward: Number(task.net_reward),
-      status: "pending",
-    })
-    .select("id")
-    .single();
-
-  if (txErr) {
-    // Race: chiave unica già presente -> restituisce l'esistente
-    if (txErr.code === "23505") {
-      const { data: r } = await sb.from("transactions").select("id").eq("idempotency_key", idempotencyKey).maybeSingle();
-      return json(200, { status: "success", transaction_id: r.id, redirect_url: task.partner_url, already_started: true });
+    if (!user_id || !task_id) {
+      return { 
+        statusCode: 400, 
+        body: JSON.stringify({ status: 'error', message: 'Parametri user_id o task_id mancanti' }) 
+      };
     }
-    return json(500, { status: "error", message: "Errore nella registrazione. Riprova." });
+
+    const { data: task, error: taskError } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('id', task_id)
+      .single();
+
+    if (taskError || !task) throw new Error('Task non trovato nel database.');
+
+    const rawReward = Number(task.total_reward || 0);
+    const expensePercentage = Number(task.expense_percentage || 25);
+    const expenses = rawReward * (expensePercentage / 100);
+    const netEarnings = rawReward - expenses;
+    const userShare = Number((netEarnings * 0.5).toFixed(2));
+
+    if (idempotencyKey) {
+      const { data: existingTx } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('idempotency_key', idempotencyKey)
+        .maybeSingle();
+
+      if (existingTx) {
+        return {
+          statusCode: 200,
+          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+          body: JSON.stringify({
+            status: 'success',
+            transaction_id: existingTx.id,
+            redirect_url: `${task.partner_url}&subid=${existingTx.id}`
+          })
+        };
+      }
+    }
+
+    const entryCost = Number(task.entry_cost || 0);
+    if (entryCost > 0) {
+      const advanceAmount = entryCost * 0.50;
+
+      const { data: user } = await supabase
+        .from('users')
+        .select('balance')
+        .eq('id', user_id)
+        .single();
+
+      if (user) {
+        const newBalance = Number(user.balance) + advanceAmount;
+        
+        await supabase
+          .from('users')
+          .update({ balance: newBalance })
+          .eq('id', user_id);
+
+        await supabase
+          .from('system_logs')
+          .insert([{
+            event_type: 'cofinance_advance',
+            user_id: user_id,
+            details: { task_id, entry_cost: entryCost, advance_credited: advanceAmount }
+          }]);
+      }
+    }
+
+    const { data: transaction, error: txError } = await supabase
+      .from('transactions')
+      .insert([{
+        user_id,
+        task_id,
+        net_reward: userShare,
+        status: 'pending',
+        idempotency_key: idempotencyKey || null
+      }])
+      .select('*')
+      .single();
+
+    if (txError) throw txError;
+
+    const { data: userToUpdate } = await supabase
+      .from('users')
+      .select('pending_balance')
+      .eq('id', user_id)
+      .single();
+
+    if (userToUpdate) {
+      const newPendingBalance = Number(userToUpdate.pending_balance || 0) + userShare;
+      await supabase
+        .from('users')
+        .update({ pending_balance: newPendingBalance })
+        .eq('id', user_id);
+    }
+
+    const partnerBaseUrl = task.partner_url;
+    const finalRedirectUrl = `${partnerBaseUrl}${partnerBaseUrl.includes('?') ? '&' : '?'}subid=${transaction.id}`;
+
+    return {
+      statusCode: 200,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({
+        status: 'success',
+        transaction_id: transaction.id,
+        redirect_url: finalRedirectUrl,
+        subid: transaction.id
+      })
+    };
+
+  } catch (error) {
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      body: JSON.stringify({ status: 'error', message: error.message })
+    };
   }
-
-  // Riserva la quota utente (50%)
-  const { error: balErr } = await sb
-    .from("users")
-    .update({ balance: Number(user.balance) - stake })
-    .eq("id", userId);
-  if (balErr) return json(500, { status: "error", message: "Errore aggiornamento saldo." });
-
-  const sep = task.partner_url.includes("?") ? "&" : "?";
-  const redirectUrl = `${task.partner_url}${sep}subid=${encodeURIComponent(subid)}&subid2=${encodeURIComponent(taskId)}`;
-
-  return json(200, { status: "success", transaction_id: tx.id, subid, redirect_url: redirectUrl });
-};
+}
